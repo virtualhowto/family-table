@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {DEFAULT_PLAN, RECIPES, PRODUCTS} from '../data.js';
+import {getTotals,makeShopping} from '../calculations.js';
+const state=()=>({plan:structuredClone(DEFAULT_PLAN),excluded:[],pantry:[],checked:[],prices:{},budget:200,people:5,teens:3,coffeeGrams:60,coffeeMilk:350});
+test('starter week builds a positive grocery total',()=>{const t=getTotals(state());assert.ok(t.total>0);assert.ok(t.rows.length>10);});
+test('coffee beans are on the list',()=>{const r=makeShopping(state()).find(x=>x.id==='coffee');assert.equal(r.buy,1000);});
+test('swapping dinner changes grocery requirements',()=>{const s=state(),before=getTotals(s).total;s.plan[0].dinner='sausage_tray';const after=getTotals(s).total;assert.notEqual(before,after);});
+test('marking pantry items excludes their prices',()=>{const s=state(),before=getTotals(s).total;s.pantry=['milk'];assert.ok(getTotals(s).total<before);});
+test('school lunch quantity scales with teenagers',()=>{const s=state(),before=makeShopping(s).find(x=>x.id==='bars').required;s.teens=4;const after=makeShopping(s).find(x=>x.id==='bars').required;assert.equal(after,20);assert.equal(before,15);});
+test('all recipes use known product identifiers',()=>{const ids=Object.keys(PRODUCTS);for(const r of RECIPES)for(const id of Object.keys(r.ingredients))assert.ok(ids.includes(id),id);});
