@@ -1,0 +1,5 @@
+const CACHE='family-table-v1-2026-11-02';
+const ASSETS=['./','./index.html','./styles.css','./app.js','./data.js','./calculations.js','./manifest.webmanifest','./assets/app-192.png','./assets/app-512.png','./assets/porridge.png','./assets/sandwich.png','./assets/roast.png','./assets/bolognese.png','./assets/sausage_rice.png','./assets/stirfry.png','./assets/meatballs.png','./assets/sausage_pasta.png','./assets/chicken_rice.png','./assets/wraps.png'];
+self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
+self.addEventListener('fetch',e=>{if(e.request.method!=='GET'||new URL(e.request.url).origin!==location.origin)return;e.respondWith(fetch(e.request).then(resp=>{if(resp.ok){const clone=resp.clone();caches.open(CACHE).then(c=>c.put(e.request,clone));}return resp;}).catch(()=>caches.match(e.request)));});

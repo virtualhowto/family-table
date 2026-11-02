@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#214939">
+  <meta name="description" content="A family meal planner with flexible recipes, budget-aware shopping and portable lunches.">
+  <title>Family Table — Meal Planner</title>
+  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="shell nav-bar">
+      <a class="brand" href="#planner" aria-label="Family Table home"><span class="brand-mark">✳</span><span>family<span class="brand-light">table</span><small>WEEKLY MEAL PLANNER</small></span></a>
+      <div class="top-actions"><span class="cloud-note">● Saved on this device</span><button type="button" class="small-btn light" data-action="print">↥ Print view</button></div>
+    </div>
+  </header>
+  <main class="shell" id="app" aria-live="polite"></main>
+  <footer class="shell footer"><span>Made for real family dinners, busy mornings and portable lunches.</span><span>Prices are estimates, not live supermarket quotes.</span></footer>
+  <div id="modal" class="modal-host" aria-live="polite"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <input id="import-json" type="file" accept="application/json,.json" hidden>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

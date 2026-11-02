@@ -1,0 +1,22 @@
+# Optional self-hosted Docker Swarm deployment, using your existing Traefik overlay network.
+# Export MEAL_HOST and TRAEFIK_NETWORK before running: docker stack deploy -c stack.yml familytable
+services:
+  web:
+    image: ${MEAL_IMAGE:-ghcr.io/REPLACE_ME/family-meal-planner:latest}
+    networks:
+      - proxy
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=${TRAEFIK_NETWORK}
+        - traefik.http.routers.family-table.rule=Host(`${MEAL_HOST}`)
+        - traefik.http.routers.family-table.entrypoints=websecure
+        - traefik.http.routers.family-table.tls=true
+        - traefik.http.services.family-table.loadbalancer.server.port=80
+networks:
+  proxy:
+    external: true
+    name: ${TRAEFIK_NETWORK}
