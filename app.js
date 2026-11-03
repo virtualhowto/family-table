@@ -1,8 +1,10 @@
 import {PRODUCTS, RECIPES, DEFAULT_PLAN, DAYS} from './data.js';
 import {lookup, makeShopping, getTotals, formatQuantity, money} from './calculations.js';
+import {generateWeek} from './generator.js';
 const KEY='family-table-v1';
 const DEFAULT=()=>({plan:structuredClone(DEFAULT_PLAN),excluded:[],pantry:[],checked:[],prices:{},budget:200,people:5,teens:3,coffeeGrams:60,coffeeMilk:350});
 let state=load(), tab=tabFromHash(), filter='all', search='', toastTimer, modalContext=null;
+let generatorParts={breakfast:true,lunch:true,dinner:true}, generatorMessage='';
 const app=document.getElementById('app'), modal=document.getElementById('modal');
 const safe=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function load(){try{const saved=JSON.parse(localStorage.getItem(KEY));if(!saved)return DEFAULT();return sanitize(saved);}catch{return DEFAULT();}}
@@ -41,7 +43,18 @@ function render(){
   ${budgetLeft<0?`<div class="notice warning">This plan is ${money(-budgetLeft)} above your ${money(state.budget)} target using your estimated prices. Swap meals, mark pantry items as already owned or adjust prices in the shopping list.</div>`:''}
   ${tab==='planner'?renderPlanner():tab==='shopping'?renderShop(totals):tab==='recipes'?renderRecipes():renderSettings()}`;
 }
-function renderPlanner(){return `<section class="section-head"><div><h2>Seven days of family food</h2><p>Use ↻ to rotate a meal or Change to pick a specific alternative.</p></div><div class="section-actions"><button class="btn sm" data-action="reset-plan">Reset week</button><button class="btn sm primary" data-action="go-shopping">View shopping list →</button></div></section>
+function renderGenerator(){return `<section class="panel generator-panel" aria-labelledby="generator-title">
+  <div class="generator-heading"><div><div class="eyebrow">BUILD A WEEK FOR YOUR BUDGET</div><h2 id="generator-title">Set the budget. Generate the meals.</h2><p>Family breakfasts, three teenagers' school lunches, portable weekend lunches and meat-based dinners. No beans or lentils.</p></div><span class="chip">No AI subscription</span></div>
+  <div class="generator-fields">
+    <label class="field">Weekly grocery budget (AUD)<input id="generator-budget" type="number" min="20" max="3000" step="5" value="${state.budget}" aria-label="Weekly grocery budget"></label>
+    <label class="field">People in family<input type="number" min="1" max="20" data-setting="people" value="${state.people}"></label>
+    <label class="field">School lunches for teens<input type="number" min="0" max="20" data-setting="teens" value="${state.teens}"></label>
+  </div>
+  <fieldset class="generator-parts"><legend>What should I regenerate?</legend>${[['breakfast','Breakfasts'],['lunch','School + weekend lunches'],['dinner','Dinners']].map(([key,label])=>`<label><input type="checkbox" data-generate-part="${key}" ${generatorParts[key]?'checked':''}> ${label}</label>`).join('')}</fieldset>
+  <div class="generator-actions"><button class="btn primary" data-action="generate-week">✦ Generate my week</button><span class="mini muted">Uses your recipe exclusions, saved price estimates and pantry items.</span></div>
+  ${generatorMessage?`<div class="notice generator-result" role="status">${safe(generatorMessage)}</div>`:''}
+  </section>`;}
+function renderPlanner(){return `${renderGenerator()}<section class="section-head"><div><h2>Seven days of family food</h2><p>Use ↻ to rotate a meal or Change to pick a specific alternative.</p></div><div class="section-actions"><button class="btn sm" data-action="reset-plan">Reset week</button><button class="btn sm primary" data-action="go-shopping">View shopping list →</button></div></section>
 <div class="schedule">${state.plan.map((d,i)=>{
   const dinner=lookup[d.dinner],b=lookup[d.breakfast],l=lookup[d.lunch];
   return `<article class="day-card"><div class="day-top"><div><div class="day-tag">Day ${i+1}${i>=5?' · Weekend':''}</div><div class="day-name">${DAYS[i]}</div></div><span class="chip">${i<5?'School day':'Everyone home'}</span></div><img class="photo" src="${image(dinner)}" alt="Illustration of ${safe(dinner.name)}" loading="lazy"><div class="day-body"><div style="display:flex;gap:10px;justify-content:space-between;align-items:start"><div><h3 class="dinner-title">${safe(dinner.name)}</h3><p class="dinner-desc">${safe(dinner.description)} · ${dinner.time}</p></div><button class="btn sm" data-action="view" data-id="${dinner.id}">Recipe</button></div>
@@ -72,6 +85,20 @@ window.addEventListener('hashchange',()=>{tab=tabFromHash();render();window.scro
 document.addEventListener('click',ev=>{
   const btn=ev.target.closest('[data-action]');if(!btn)return;const {action,day,kind,id,filter:which}=btn.dataset;const idx=Number(day);
   if(action==='print'){window.print();return;}if(action==='go-shopping'){location.hash='shopping';return;}
+  if(action==='generate-week'){
+    const input=document.getElementById('generator-budget');
+    const requested=Number(input?.value);
+    if(!Number.isFinite(requested)||requested<20||requested>3000){showToast('Enter a weekly budget between $20 and $3,000.');return;}
+    state.budget=requested;
+    const result=generateWeek(state,{sections:generatorParts});
+    if(result.error){generatorMessage=result.error;updateAndRender(result.error);return;}
+    state.plan=result.plan;state.checked=[];
+    generatorMessage=result.withinBudget
+      ?`Generated a new week for ${money(result.total)} — ${money(result.budget-result.total)} under budget (${result.changed} meals changed). Open the Shopping list to see all items.`
+      :`The lowest-cost varied option found was ${money(result.total)}, ${money(result.total-result.budget)} above your target. No within-budget combination was found with the current recipes, saved prices and pantry settings. Try increasing your budget or marking food you already have.`;
+    updateAndRender(result.withinBudget?'New week generated within your budget.':'Plan generated, but the estimated cost exceeds your budget.');
+    return;
+  }
   if(action==='rotate'){rotate(idx,kind);return;}if(action==='swap'){showSwap(idx,kind);return;}
   if(action==='select-recipe'){if(modalContext){state.plan[modalContext.day][modalContext.kind]=id;closeModal();updateAndRender('Meal swapped. Shopping budget recalculated.');}return;}
   if(action==='close-modal'){closeModal();return;}if(action==='view'){viewRecipe(id);return;}
@@ -84,6 +111,8 @@ document.addEventListener('click',ev=>{
 });
 document.addEventListener('change',ev=>{
   const el=ev.target;
+  if(el.matches('[data-generate-part]')){generatorParts[el.dataset.generatePart]=el.checked;return;}
+  if(el.id==='generator-budget'){const v=Number(el.value);if(Number.isFinite(v)&&v>=20&&v<=3000){state.budget=v;updateAndRender('Budget updated. Generate a new menu when ready.');}return;}
   if(el.matches('[data-check]')){const id=el.dataset.check;state.checked=el.checked?[...new Set([...state.checked,id])]:state.checked.filter(x=>x!==id);updateAndRender();}
   if(el.matches('[data-pantry]')){const id=el.dataset.pantry;state.pantry=el.checked?[...new Set([...state.pantry,id])]:state.pantry.filter(x=>x!==id);updateAndRender();}
   if(el.matches('[data-price]')){const id=el.dataset.price,v=Number(el.value);if(Number.isFinite(v)&&v>=0&&v<=10000)state.prices[id]=v;updateAndRender();}

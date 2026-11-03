@@ -6,13 +6,14 @@ A lightweight, responsive, **no-backend** web app built from the printable 2–8
 
 - Seven dinners for the whole family; weekday school lunches for three teenagers; Saturday and Sunday picnic lunches for everyone; daily breakfasts.
 - Whole coffee beans and optional milk allowance, counted in shopping quantities.
+- **Budget-first weekly generator:** enter a grocery target, number of family members and school lunches, then generate breakfast, lunch and dinner selections from the existing recipe library (all or selected meals). The generator aims for a varied, affordable menu and warns when its search cannot find a plan within the target.
 - Swap an individual meal or rotate the seven dinners; automatically recalculate the grocery items and cost.
 - Exclude a disliked meal from future rotations, restore it later, view ingredients and cooking method.
 - Change family size, school-lunch count, weekly AUD budget, coffee quantities and individual estimated pack prices.
 - Track pantry supplies, tick shopping items, copy grocery list, print current view.
 - Save changes to browser localStorage; export/import a JSON backup.
 - Installable PWA with an offline cache, after the first successful load.
-- No beans or lentils in the initial recipe library; the frozen vegetable choice has no green beans.
+- Generated dinners always contain a meat/fish protein; no beans or lentils in the initial recipe library; the frozen vegetable choice has no green beans.
 
 ## Run it locally
 
